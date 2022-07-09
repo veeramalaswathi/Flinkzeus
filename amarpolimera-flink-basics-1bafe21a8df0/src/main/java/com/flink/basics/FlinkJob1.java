@@ -30,6 +30,7 @@ public class FlinkJob1 {
 
         ParameterTool parameterTool = ParameterTool.fromArgs(args);
         env.getConfig().setGlobalJobParameters(parameterTool);
+        env.getConfig().registerPojoType(AppStats.class);
         String checkPointPath = "/tmp/wk-test";//parameterTool.get("checkpoint-path");
         if (checkPointPath == null || checkPointPath.trim().isEmpty()) {
             throw new IllegalArgumentException("checkpoint-path is mandatory for storing state");
@@ -89,9 +90,10 @@ class AppStatProcessFunction extends KeyedProcessFunction<String, ZeusEvent, Tup
     public void processElement(ZeusEvent zeusEvent,
                                KeyedProcessFunction<String, ZeusEvent, Tuple2<ZeusEvent, AppStats>>.Context context,
                                Collector<Tuple2<ZeusEvent, AppStats>> collector) throws Exception {
-        AppStats  appStats = appStatsState.value();
 
+        AppStats  appStats = appStatsState.value();
         if(appStats == null ){
+            appStats =  new AppStats();
             appStats.setStartTime(System.currentTimeMillis());
         }
 
@@ -105,7 +107,7 @@ class AppStatProcessFunction extends KeyedProcessFunction<String, ZeusEvent, Tup
             appStats.setCrashCount(crashCount);
         }
 
-        if(appStats != null){
+        if(appStats != null && appStats.getStartCount() > 0){
             int percent = appStats.getCrashCount() / appStats.getStartCount() *100;
             appStats.setPercent(percent);
             //System.out.println("Crash/Open percent: " + percent);
